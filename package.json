@@ -1,0 +1,19 @@
+{
+  "name": "node-cgmon",
+  "description": "cgminer monitor in node",
+  "author": "Chris Braddock <braddock.chris@gmail.com>",
+  "dependencies": {
+    "coffee-script": "~1.6.3",
+    "cgminer": "0.1.0",
+    "easy-config": "0.2.3",
+    "gmail-sender": "0.1.2",
+    "running": "0.0.1",
+    "npmlog": "0.0.6",
+    "jsdom": "0.8.10",
+    "pidof": "1.0.2",
+    "lodash": "2.4.1"
+  },
+  "devDependencies": {
+  },
+  "engine": "node >= 0.10.24"
+}

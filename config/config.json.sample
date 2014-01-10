@@ -1,0 +1,22 @@
+{
+    "cgminer": {
+        "startWaitSeconds": 5,
+        "cmd": "./start_screen.sh",
+        "args": [],
+        "host": "127.0.0.1",
+        "port": "4028"
+    },
+    "monitorIntervalSeconds": "5",
+    "logLevel": "info",
+    "logEnabled": true,
+    "logPath": "cgmon.log",
+    "emailEnabled": true,
+    "email": {
+        "user": "youremail@gmail.com",
+        "pass": "your gmail password",
+        "from": "from email address",
+        "to": "to email address",
+        "subject": "cgmon",
+        "template": "email-template.html"
+    }
+}
