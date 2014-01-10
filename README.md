@@ -84,5 +84,7 @@ The content of this project itself is licensed under the [Creative Commons Attri
 ---
 
 If you find this software useful, donations are welcome at:
+
 BTC `1JqsUozh2EZVWqA4RxdnsUSNvmEwpFAhWP`
+
 LTC `LLoCXwYRBQGL44vGZWRYrsScweYJzkcvqh`
