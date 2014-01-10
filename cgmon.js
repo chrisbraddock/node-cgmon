@@ -2,7 +2,7 @@
 
 // node-cgmon - cgminer monitor in node.js
 //
-// node-cgmon is a utility to monitor cgminer (https://github.com/ckolivas/cgminer) under linux and maximize its uptime
+// node-cgmon is a utility to monitor and maximize uptime of cgminer (https://github.com/ckolivas/cgminer) under linux
 //
 // by Chris Braddock <braddock.chris@gmail.com>
 //
