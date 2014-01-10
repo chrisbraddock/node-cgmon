@@ -1,5 +1,5 @@
 # node-cgmon
----
+
 **node-cgmon is a utility intended to monitor [cgminer](https://github.com/ckolivas/cgminer) under linux and maximize its uptime**
 
 *(developed and tested against 3.7.2 cgminer and scrypt-based mining)*
@@ -17,7 +17,7 @@
 
 
 ## Usage
----
+
 1. **Copy config/config.sample.json** to **config/config.json**
 2. **Edit config/config.json** for your environment
 
@@ -33,7 +33,7 @@
 
     `monitorIntervalSeconds` - interval in seconds which monitoring takes place *(default 5)*
 
-	`logLevel` - 'debug' for more verbose logging or 'info' for standard logging *(default 'info')*
+    `logLevel` - 'debug' for more verbose logging or 'info' for standard logging *(default 'info')*
 
     `logEnabled` - send stdout to logPath *(default true)*
 
@@ -42,7 +42,7 @@
     `emailEnabled` - send emails for significant events *(default true)* (currently supports Gmail only)
 
     `emai.user` - username (user@domain.com)
-    
+
     `email.pass` - password
 
     `email.from` - notification from email address
@@ -63,7 +63,7 @@
    cgminer output *(CTRL+A CTRL+D) to detatch*
 
 ## TODO
----
+
 * restart cgminer if hasrate falls below a threshold
 * restart cgminer if total shares stop increasing based on a threshold
 * reboot the machine if ...
@@ -71,20 +71,18 @@
 * figure out jQuery deferreds mess
 
 ## Credits
----
+
 node-cgmon was inspired by [cgmon.tcl](https://bitcointalk.org/index.php?topic=353436.0) and borrows concepts from [CGWatcher](https://github.com/justinmilone/CGWatcher).
 
 node-cgmon leverages a few Node modules but most notably, [node-cgminer](https://github.com/tlrobinson/node-cgminer) which eliminated a nice bit of work.
 
 
 ## License
----
+
 The content of this project itself is licensed under the [Creative Commons Attribution 3.0 license](http://creativecommons.org/licenses/by/3.0/us/deed.en_US), and the underlying source code used to format and display that content is licensed under the [MIT license](http://opensource.org/licenses/mit-license.php).
 
 ---
 
 If you find this software useful, donations are welcome at:
-
 BTC `1JqsUozh2EZVWqA4RxdnsUSNvmEwpFAhWP`
-
 LTC `LLoCXwYRBQGL44vGZWRYrsScweYJzkcvqh`
