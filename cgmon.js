@@ -176,7 +176,7 @@ function monitor() {
         return;
     }
 
-    // for now, dump a summary - probably this will go away
+    // log out a summary line
     api.summary().then(function (results) {
         var status = results.STATUS[0];   // why is this an array?
         var summary = results.SUMMARY[0]; // why is this an array?
