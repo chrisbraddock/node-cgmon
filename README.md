@@ -8,6 +8,10 @@
 
 * **starts a cgminer [screen](http://en.wikipedia.org/wiki/GNU_Screen) instance then monitors mining status via the cgminer API**
 * **periodically checks that cgminer is running and attempts to restart it if needed**
+* **monitors gpu health and restarts gpu if needed**
+* **restarts cgminer if API access becomes read-only (a symptom of cgminer instability)**
+* **outputs information to a filesystem log file (optional)**
+* **sends email notifications of important events (optional)**
 
 ## Prerequisites
 * **OSX or linux host operating system** *(node-cgmon has been tested only on OSX 10.9 and Xubuntu linux 13.10)*
