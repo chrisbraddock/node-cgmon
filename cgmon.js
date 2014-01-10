@@ -129,12 +129,12 @@ function getCgminerPid(attemptStart) {
     pidof('cgminer', function (err, pid) {
         if (!err &&
             pid != null) {
-            log.info("got cgminer PID; resolving", pid);
+            log.debug("got cgminer PID; resolving", pid);
             gotPid.resolve(pid);
             return;
         }
         if (!attemptStart) {
-            log.info("couldn't get cgminer PID and !attemptStart; rejecting");
+            log.debug("couldn't get cgminer PID and !attemptStart; rejecting");
             gotPid.reject(err);
             return;
         }
@@ -156,8 +156,8 @@ function startCgminer() {
         config.cgminer.cmd,
         config.cgminer.args
     );
-    log.info("sleeping seconds to allow cgminer process to start", startWaitSeconds);
     // lame hack
+    log.info("sleeping seconds to allow cgminer process to start", startWaitSeconds);
     setTimeout(function () {
         cgminerStarted.resolve();
     }, startWaitSeconds * 1000);
@@ -219,7 +219,8 @@ function monitor() {
 // send smtp email
 function email(content) {
     if (!config.emailEnabled) { return; }
-    log.info("emailing", content);
+    log.info("emailing", config.email.to);
+    log.debug("content", content);
     gmail.send({
         subject: config.email.subject,
         from: config.email.from,
