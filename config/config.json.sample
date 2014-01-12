@@ -14,6 +14,7 @@
     maxFanSpeed: 4500,
     maxHErrPct: 0,
     maxRejPct: 0,
+    maxGetCgminerPidAttempts: 5,
     monitorIntervalSeconds: 1,
     logLevel: "debug",
     logEnabled: true,

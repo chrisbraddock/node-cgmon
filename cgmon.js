@@ -26,6 +26,7 @@ var gmail = require('gmail-sender');
 var fs = require('fs');
 var _ = require('lodash');
 var reboot = require('reboot');
+var fs = require('fs');
 
 // VARIABLES -----------------------------------------------------------------------------------------------------------
 
@@ -34,6 +35,8 @@ var cgminerClient;
 var cgminerPID;
 var monitorIntervalHdl;
 var lastApiResponse;
+var screenMinerCmd = './start_miner.sh';
+var getCgminerPidAttempts = 0;
 
 // *********************************************************************************************************************
 // SETUP & START MONITORING ********************************************************************************************
@@ -56,6 +59,7 @@ config = _.defaults(config, {
     maxFanSpeed: 4500,
     maxHErrPct: 0,
     maxRejPct: 0,
+    maxGetCgminerPidAttempts: 5,
     monitorIntervalSeconds: 1,
     logLevel: "debug",
     logEnabled: true,
@@ -90,6 +94,12 @@ if (config.logEnabled) {
             if (err) { console.log('unable to write to logPath', config.logPath, err, data.message); }
         });
     });
+}
+
+// check for start_miner.sh
+if (!fs.existsSync(screenMinerCmd)) {
+    log.error(screenMinerCmd + " is missing; cannot continue");
+    return;
 }
 
 // setup gmail
@@ -142,6 +152,8 @@ function stopMonitor() {
     log.info("stopping monitor");
     // cleanup monitor setInterval handle
     clearInterval(monitorIntervalHdl);
+    // if we didn't nullify this, a false reboot could be triggered on subsequent startMonitor calls
+    lastApiResponse = null;
 }
 
 // re-start monitoring cgminer
@@ -158,10 +170,18 @@ function getCgminerPid(attemptStart) {
 
     attemptStart = typeof attemptStart === 'boolean' ? attemptStart : true;
 
+    // if we repeatedly can't get PID, reboot
+    getCgminerPidAttempts++;
+    if (getCgminerPidAttempts > config.maxGetCgminerPidAttempts) {
+        rebootMachine("too many attempts to get PID");
+        return gotPid.reject("too many attempts to get PID");
+    }
+
     pidof('cgminer', function (err, pid) {
         if (!err &&
             pid != null) {
             log.debug("got cgminer PID; resolving", pid);
+            getCgminerPidAttempts = 0;
             gotPid.resolve(pid);
             return;
         }
@@ -184,6 +204,7 @@ function getCgminerPid(attemptStart) {
 function startCgminer() {
     var cgminerStarted = $.Deferred();
     var startWaitSeconds = config.cgminer.startWaitSeconds;
+    log.info("spawning cgminer", config.cgminer.cmd, config.cgminer.args);
     spawn(
         config.cgminer.cmd,
         config.cgminer.args
@@ -199,7 +220,7 @@ function startCgminer() {
 function rebootMachine(message) {
     stopMonitor();
     log.warn("rebooting", message);
-    email("rebooting" + config.minerName + ' ' + message);
+    email("rebooting " + config.minerName + ' ' + message);
     // give time for email to send
     setTimeout(function () {
         reboot.reboot();
