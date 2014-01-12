@@ -66,13 +66,22 @@
 7. `screen -r cgminer` should attach to your cgminer screen instance and show you standard
    cgminer output *(CTRL+A CTRL+D) to detatch*
 
+**NOTE:** if you run this node process under a non-superuser, you must give node permissions to reboot the system:
+
+	sudo setcap CAP_SYS_BOOT=+ep /path/to/node/binary
+
 ## TODO
 
-* restart cgminer if hasrate falls below a threshold
+* restart cgminer if hasrate falls below a threshold (currently only warns via email)
 * restart cgminer if total shares stop increasing based on a threshold
-* reboot the machine if ...
+* periodic status emails
+* limit email warnings (potential for email spamming at the moment)
 * switch to basic smtp vs. Gmail-only
+* break up monitor() method
+* fix janky arguments passing in api() method
 * figure out jQuery deferreds mess
+* decide what should be done if gpu count is wrong
+* periodic restart/reboot?
 
 ## Credits
 
