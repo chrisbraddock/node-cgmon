@@ -20,6 +20,7 @@
     logEnabled: true,
     logPath: "cgmon.log",
     emailEnabled: false,
+    maxEmailIntervalMinutes: 60,
     email: {
         user: "youremail@gmail.com",
         pass: "your gmail password",

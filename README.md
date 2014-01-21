@@ -25,6 +25,8 @@
 1. **Copy config/config.sample.json** to **config/config.json**
 2. **Edit config/config.json** for your environment
 
+    `minerName` - a descriptive name used in logs and emails
+
     `cgminer.startWaitSeconds` - the time cgmon should wait for cgminer to startup after running it
 
     `cgminer.cmd` - screen startup script **(normally you do not need to modify this)**
@@ -34,6 +36,22 @@
     `cgminer.host` - host IP for cgminer API *(default '127.0.0.1')*
 
     `cgminer.port` - host port for cgminer API *(default 4028)*
+
+    `minMHSAv` - minimum mh/s average to issue warning for
+
+    `minMHS5s` - minimum mh/s over 5 seconds to issue warning for
+
+    `numGPUs` - will issue warning if this value is different than the detected number of gpus
+
+    `maxTemp` - will reboot machine if gpu temperature exceeds this
+
+    `maxFanSpeed` - will reboot machine if gpu fan speed exceeds this
+
+    `maxHErrPct` - will reboot machine if gpu hardware error % exceeds this
+
+    `maxRejPct` - will reboot machine if gpu work reject % exceeds this
+
+    `maxGetCgminerPidAttempts` - will reboot machine if the number of attempts to get cgminer PID exceeds this
 
     `monitorIntervalSeconds` - interval in seconds which monitoring takes place *(default 5)*
 
@@ -45,6 +63,8 @@
 
     `emailEnabled` - send emails for significant events *(default true)* (currently supports Gmail only)
 
+    `maxEmailIntervalMinutes`
+
     `emai.user` - username (user@domain.com)
 
     `email.pass` - password
@@ -53,9 +73,9 @@
 
     `email.to` - array of notification to email addresses *exmaple ['joe@example.com', 'mary@example.com']*
 
-    `email.subject` - subject for notification emails *(default 'cgmon')*
+    `email.subject` - subject for notification emails
 
-    `email.template` - html template used to format email message *(default 'email-template.html)*; this file can be found in the project root and customized if desired
+    `email.template` - html template used for emails (this file can be found in the project root and customized if desired)
 
 3. **Copy start_miner_example.sh** to **start_miner.sh**
 4. **Edit start_miner.sh** for your environment; *modify the paths to cgminer
@@ -68,16 +88,17 @@
 
 **NOTE:** if you run this node process under a non-superuser, you must give node permissions to reboot the system:
 
-	sudo setcap CAP_SYS_BOOT=+ep /path/to/node/binary
+    sudo setcap CAP_SYS_BOOT=+ep /path/to/node/binary
 
 ## TODO
 
+* limit email warnings (potential for email spamming at the moment) (nearly takes care of periodic status emails)
+* email for pool changes and coin changes
 * restart cgminer if hasrate falls below a threshold (currently only warns via email)
 * restart cgminer if total shares stop increasing based on a threshold
-* periodic status emails
-* limit email warnings (potential for email spamming at the moment)
 * switch to basic smtp vs. Gmail-only
 * break up monitor() method
+* check that pools are executable
 * fix janky arguments passing in api() method
 * figure out jQuery deferreds mess
 * decide what should be done if gpu count is wrong
