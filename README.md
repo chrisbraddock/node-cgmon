@@ -92,8 +92,7 @@
 
 ## TODO
 
-* limit email warnings (potential for email spamming at the moment) (nearly takes care of periodic status emails)
-* email for pool changes and coin changes
+* implement log rotation
 * restart cgminer if hasrate falls below a threshold (currently only warns via email)
 * restart cgminer if total shares stop increasing based on a threshold
 * switch to basic smtp vs. Gmail-only
@@ -102,6 +101,7 @@
 * fix janky arguments passing in api() method
 * figure out jQuery deferreds mess
 * decide what should be done if gpu count is wrong
+* email for coin changes (not sure how to do this via information reported from coin()
 * periodic restart/reboot?
 
 ## Credits
