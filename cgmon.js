@@ -39,7 +39,6 @@ var screenMinerCmd = "./start_miner.sh";
 var getCgminerPidAttempts = 0;
 var lastEmailDate = 0;
 var emailContent;
-var lastStatus;
 var lastPool;
 
 // *********************************************************************************************************************
@@ -95,7 +94,7 @@ log.debug("config", config);
 // setup filesystem logging
 if (config.logEnabled) {
     log.on("log", function (data) {
-        fs.appendFile(config.logPath, data.message, function(err) {
+        fs.appendFile(config.logPath, data.message + "\n", function(err) {
             if (err) { console.log("unable to write to logPath", config.logPath, err, data.message); }
         });
     });
@@ -374,8 +373,9 @@ function email(content, ignoreMaxEmailIntervalMinutes) {
         (Date.now() - lastEmailDate) < (config.maxEmailIntervalMinutes * 60 * 1000)) {
         emailContent += (content + "\n");
         return;
+    } else {
+        emailContent = content;
     }
-    emailContent = content;
 
     log.info("emailing", config.email.to);
     log.debug("content", emailContent);
