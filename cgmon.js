@@ -34,6 +34,7 @@ var $, window = jsdom.jsdom().parentWindow; // jQuery deferreds crap; TODO revis
 var cgminerClient;
 var cgminerPID;
 var monitorIntervalHdl;
+var startMonitorTimeoutHdl;
 var lastApiResponse;
 var screenMinerCmd = "./start_miner.sh";
 var getCgminerPidAttempts = 0;
@@ -63,6 +64,7 @@ config = _.defaults(config, {
     maxHErrPct: 0,
     maxRejPct: 0,
     maxGetCgminerPidAttempts: 5,
+    monitorStartTimeoutSeconds: 10,
     monitorIntervalSeconds: 1,
     logLevel: "debug",
     logEnabled: true,
@@ -131,9 +133,13 @@ jsdom.jQueryify(window, "jquery.js", function () {
 // start monitoring cgminer
 function startMonitoring() {
     log.info("starting monitor");
+    startMonitorTimeoutHdl = setTimeout(function () {
+        rebootMachine("monitoring didn't start before monitorStartTimeoutSeconds");
+    }, config.monitorStartTimeoutSeconds * 1000);
     getCgminerPid()
     .fail(function(status) {
         if (status === "cgminer start") {
+            clearTimeout(startMonitorTimeoutHdl);
             log.info("could not get cgminer PID; attempted start/restart");
             // cgminer has been started/restarted; try monitoring it again
             startMonitoring();
@@ -142,6 +148,7 @@ function startMonitoring() {
         log.error("could not get cgminer PID; exiting", status);
     })
     .done(function(pid) {
+        clearTimeout(startMonitorTimeoutHdl);
         log.info("got cgminer PID; will start monitoring", pid);
         cgminerPID = pid;
         email("starting monitor", true);

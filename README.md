@@ -51,6 +51,8 @@
 
     `maxRejPct` - will reboot machine if gpu work reject % exceeds this
 
+    `monitorStartTimeoutSeconds` - will reboot machine if starting monitoring isn't successful within this many seconds
+
     `maxGetCgminerPidAttempts` - will reboot machine if the number of attempts to get cgminer PID exceeds this
 
     `monitorIntervalSeconds` - interval in seconds which monitoring takes place *(default 5)*
