@@ -39,7 +39,7 @@ var lastApiResponse;
 var screenMinerCmd = "./start_miner.sh";
 var getCgminerPidAttempts = 0;
 var lastEmailDate = 0;
-var emailContent;
+var emailContent = '';
 var lastPool;
 
 // *********************************************************************************************************************
