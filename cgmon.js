@@ -378,10 +378,11 @@ function email(content, ignoreMaxEmailIntervalMinutes) {
 
     if (!ignoreMaxEmailIntervalMinutes &&
         (Date.now() - lastEmailDate) < (config.maxEmailIntervalMinutes * 60 * 1000)) {
+        log.debug("too early to email; pushing message to digest " + content);
         emailContent += (content + "\n");
         return;
     } else {
-        emailContent = content;
+        emailContent += content;
     }
 
     log.info("emailing", config.email.to);
