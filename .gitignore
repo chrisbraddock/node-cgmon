@@ -1,5 +1,5 @@
 node_modules
 config/config.json
 start_miner.sh
-cgmon.log
+cgmon.log*
 scrypt*.bin

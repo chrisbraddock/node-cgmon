@@ -12,6 +12,12 @@
 //
 // cgminer 3.7 API docs https://github.com/ckolivas/cgminer/blob/3.7/API-README
 
+// TODO configify miner process name (so sgminer works as well)
+// TODO http post notification / data option
+
+// CONSTANTS -----------------------------------------------------------------------------------------------------------
+var DEBUG_PREFIX = "node-cgmon";
+
 // MODULES -------------------------------------------------------------------------------------------------------------
 
 require("coffee-script"); // needed for cgminer module
@@ -27,6 +33,8 @@ var fs = require("fs");
 var _ = require("lodash");
 var reboot = require("reboot");
 var fs = require("fs");
+var logRotateStream = require("logrotate-stream");
+var ping = require("jjg-ping");
 
 // VARIABLES -----------------------------------------------------------------------------------------------------------
 
@@ -41,6 +49,7 @@ var getCgminerPidAttempts = 0;
 var lastEmailDate = 0;
 var emailContent = '';
 var lastPool;
+var logReadStream;
 
 // *********************************************************************************************************************
 // SETUP & START MONITORING ********************************************************************************************
@@ -54,7 +63,7 @@ config = _.defaults(config, {
         cmd: "./start_screen.sh",
         args: [],
         host: "127.0.0.1",
-        port: "4028"
+        port: "4029"
     },
     minMHSAv: 1,
     minMHS5s: 1,
@@ -66,9 +75,12 @@ config = _.defaults(config, {
     maxGetCgminerPidAttempts: 5,
     monitorStartTimeoutSeconds: 10,
     monitorIntervalSeconds: 1,
-    logLevel: "debug",
+    logLevel: "info",
     logEnabled: true,
     logPath: "cgmon.log",
+    logMaxSize: "1m",
+    logCompress: true,
+    logKeep: 3,
     emailEnabled: false,
     maxEmailIntervalMinutes: 60,
     email: {
@@ -79,22 +91,36 @@ config = _.defaults(config, {
         subject: "cgmon",
         template: "email-template.html"
     },
-    numGPUs: 1,
-    monitorIntervalSeconds: 5,
+    pingDomain: "google.com",
     apiResponseThresholdSeconds: 10
 });
 
 // add a debug log level
-log.addLevel("debug", 1500, {fg: "yellow"}, "DEBUG");
+log.addLevel("debug", 1500, {fg: "yellow"}, "debug");
 
 // set log level
 log.level = config.logLevel;
 
 // debug config (must be done after logging setup)
-log.debug("config", config);
+log.debug(DEBUG_PREFIX, "config", config);
 
 // setup filesystem logging
 if (config.logEnabled) {
+    // create log file if it doesn't exist
+    if (!fs.existsSync(config.logPath)) {
+        fs.openSync(config.logPath, "w", function (err, fd) {
+            if (err) { console.log("unable to create log file at logPath", config.logPath, err); }
+        });
+    }
+    // setup log rotation
+    logReadStream = fs.createReadStream(config.logPath);
+    logReadStream.pipe(logRotateStream({
+        file: config.logPath,
+        size: config.logMaxSize,
+        keep: config.logKeep,
+        compress: config.logCompress
+    }));
+    // grab log data on the log event and write it out to the file system
     log.on("log", function (data) {
         fs.appendFile(config.logPath, data.message + "\n", function(err) {
             if (err) { console.log("unable to write to logPath", config.logPath, err, data.message); }
@@ -104,7 +130,7 @@ if (config.logEnabled) {
 
 // check for start_miner.sh
 if (!fs.existsSync(screenMinerCmd)) {
-    log.error(screenMinerCmd + " is missing; cannot continue");
+    log.error(DEBUG_PREFIX, screenMinerCmd + " is missing; cannot continue");
     return;
 }
 
@@ -120,7 +146,7 @@ gmail.options({
 // jump through hoops for jquery deferreds :( TODO revisit
 jsdom.jQueryify(window, "jquery.js", function () {
     $ = window.jQuery;
-    log.info("jQuery available, starting monitor");
+    log.info(DEBUG_PREFIX, "jQuery available, starting monitor");
     // start the monitoring process
     cgminerClient = new CgminerClient(config.cgminer.host, config.cgminer.port);
     startMonitoring();
@@ -132,7 +158,7 @@ jsdom.jQueryify(window, "jquery.js", function () {
 
 // start monitoring cgminer
 function startMonitoring() {
-    log.info("starting monitor");
+    log.info(DEBUG_PREFIX, "starting monitor");
     startMonitorTimeoutHdl = setTimeout(function () {
         rebootMachine("monitoring didn't start before monitorStartTimeoutSeconds");
     }, config.monitorStartTimeoutSeconds * 1000);
@@ -140,16 +166,16 @@ function startMonitoring() {
     .fail(function(status) {
         if (status === "cgminer start") {
             clearTimeout(startMonitorTimeoutHdl);
-            log.info("could not get cgminer PID; attempted start/restart");
+            log.info(DEBUG_PREFIX, "could not get cgminer PID; attempted start/restart");
             // cgminer has been started/restarted; try monitoring it again
             startMonitoring();
             return;
         }
-        log.error("could not get cgminer PID; exiting", status);
+        log.error(DEBUG_PREFIX, "could not get cgminer PID; exiting", status);
     })
     .done(function(pid) {
         clearTimeout(startMonitorTimeoutHdl);
-        log.info("got cgminer PID; will start monitoring", pid);
+        log.info(DEBUG_PREFIX, "got cgminer PID; will start monitoring", pid);
         cgminerPID = pid;
         email("starting monitor", true);
         // set interval at which monitoring cycles happen
@@ -160,7 +186,7 @@ function startMonitoring() {
 // stop monitoring cgminer
 function stopMonitoring() {
     email("stopping monitor", true);
-    log.info("stopping monitor");
+    log.info(DEBUG_PREFIX, "stopping monitor");
     // cleanup monitor setInterval handle
     clearInterval(monitorIntervalHdl);
     // if we didn"t nullify this, a false reboot could be triggered on subsequent startMonitoring calls
@@ -170,7 +196,7 @@ function stopMonitoring() {
 // re-start monitoring cgminer
 function restartMonitoring() {
     email("restarting monitor", true);
-    log.info("restarting monitor");
+    log.info(DEBUG_PREFIX, "restarting monitor");
     stopMonitoring();
     startMonitoring();
 }
@@ -191,13 +217,13 @@ function getCgminerPid(attemptStart) {
     pidof("cgminer", function (err, pid) {
         if (!err &&
             pid != null) {
-            log.debug("got cgminer PID; resolving", pid);
+            log.debug(DEBUG_PREFIX, "got cgminer PID; resolving", pid);
             getCgminerPidAttempts = 0;
             gotPid.resolve(pid);
             return;
         }
         if (!attemptStart) {
-            log.debug("couldn't get cgminer PID and !attemptStart; rejecting");
+            log.debug(DEBUG_PREFIX, "couldn't get cgminer PID and !attemptStart; rejecting");
             gotPid.reject(err);
             return;
         }
@@ -215,13 +241,13 @@ function getCgminerPid(attemptStart) {
 function startCgminer() {
     var cgminerStarted = $.Deferred();
     var startWaitSeconds = config.cgminer.startWaitSeconds;
-    log.info("spawning cgminer", config.cgminer.cmd, config.cgminer.args);
+    log.info(DEBUG_PREFIX, "spawning cgminer", config.cgminer.cmd, config.cgminer.args);
     spawn(
         config.cgminer.cmd,
         config.cgminer.args
     );
     // lame hack
-    log.info("sleeping seconds to allow cgminer process to start", startWaitSeconds);
+    log.info(DEBUG_PREFIX, "sleeping seconds to allow cgminer process to start", startWaitSeconds);
     setTimeout(function () {
         cgminerStarted.resolve();
     }, startWaitSeconds * 1000);
@@ -230,7 +256,7 @@ function startCgminer() {
 
 function rebootMachine(message) {
     stopMonitoring();
-    log.warn("rebooting", message);
+    log.warn(DEBUG_PREFIX, "rebooting", message);
     email("rebooting " + config.minerName + " " + message, true);
     // give time for email to send
     setTimeout(function () {
@@ -240,12 +266,12 @@ function rebootMachine(message) {
 
 // the monitoring cycle loop; monitor() executed once per monitoring cycle
 function monitor() {
-    log.debug("monitor()", cgminerPID, api);
+    log.debug(DEBUG_PREFIX, "monitor", cgminerPID, cgminerClient);
 
     // detect and handle unresponsive api
     if (lastApiResponse != null &&
         Date.now() - lastApiResponse > (config.apiResponseThresholdSeconds * 1000)) {
-        log.warn("api unresponsive");
+        log.warn(DEBUG_PREFIX, "api unresponsive");
         rebootMachine("api unresponsive");
     }
 
@@ -253,7 +279,7 @@ function monitor() {
     // is defunct but the unresponsive api test should cover that scenario
     if (!running(cgminerPID) ||
         cgminerPID == null) {
-        log.info("cgminer not running, restarting monitoring");
+        log.info(DEBUG_PREFIX, "cgminer not running, restarting monitoring");
         restartMonitoring();
         return;
     }
@@ -262,7 +288,7 @@ function monitor() {
     api("summary").then(function (results) {
         var status = results.STATUS[0];   // why is this an array?
         var summary = results.SUMMARY[0]; // why is this an array?
-        log.info(">", "%s|S:%s|MHa:%s|MH5s:%s|A:%s|R:%s|HW:%s",
+        log.info("node-cgmon", "%s|S:%s|MHa:%s|MH5s:%s|A:%s|R:%s|HW:%s",
                  new Date(status.When).toString(), status.STATUS, summary["MHS av"], summary["MHS 5s"],
                  summary["Accepted"], summary["Rejected"], summary["Hardware Errors"]);
         if (summary["MHS av"] < config.minMHSAv ||
@@ -287,18 +313,18 @@ function monitor() {
 
     // check coin info
     api("coin").then(function (results) {
-        //log.info("coin results", results);
+        //log.info(DEBUG_PREFIX, "coin results", results);
     });
 
     // check for gpu issues; if found attempt gpu restart
     api("notify").then(function(results) {
-        log.debug("notify", results);
+        log.debug(DEBUG_PREFIX, "notify", results);
         results.forEach(function (result) {
             if (result["Last Not Well"] !== 0) {
-                log.error("gpu was not well! attempting restart...", result.ID,
+                log.error(DEBUG_PREFIX, "gpu was not well! attempting restart...", result.ID,
                     result["Last Not Well"], result["Reason Not Well"]);
                 api("gpurestart", result.ID).then(function (results) {
-                    log.info("gpurestart results", results);
+                    log.info(DEBUG_PREFIX, "gpurestart results", results);
                 });
             }
         });
@@ -307,6 +333,7 @@ function monitor() {
     // restart miner if full API access becomes read-only
     api("privileged").then(function (results) {
         if (results.STATUS[0].test(/error/i)) {
+            email("api went read-only, stopping monitoring");
             stopMonitoring();
             api("restart").then(function (results) {
                 startMonitoring();
@@ -347,12 +374,20 @@ function monitor() {
 
     });
 
-    // warn on wrong gpu count
+    // warn on wrong gpu count (will this ever happen? not sure so turn on email notices for now and see if it does)
     api("gpucount").then(function (numGPUs) {
         if (numGPUs !== config.numGPUs) {
-            log.warn("wrong gpu count", config.numGPUs, numGPUs);
-            // TODO figure out what to do here
-            //rebootMachine("wrong gpu count " + config.numGPUs + numGPUs);
+            email("wrong gpu count", config.numGPUs, numGPUs);
+        }
+    });
+
+    // test Internet connectivity
+    ping.system.ping(config.pingDomain, function(latency, status) {
+        if (status) {
+            log.debug(DEBUG_PREFIX, config.pingDomain + " ping latency: " + latency);
+        } else {
+            log.warn(DEBUG_PREFIX, config.pingDomain + " is unreachable; latency: " + latency);
+            //rebootMachine(config.pingDomain + " is unreachable; latency: " + latency);
         }
     });
 
@@ -361,10 +396,10 @@ function monitor() {
 // wrapper to cgminerClient api
 function api(method) {
     var methodComplete = $.Deferred();
-    log.debug("api", method, _.rest(Array.prototype.slice(arguments)));
+    log.debug(DEBUG_PREFIX, "api", method, _.rest(Array.prototype.slice(arguments)));
     // TODO fix this janky crap ... couldn't get .apply to work
     cgminerClient[method](arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]).then(function() {
-        log.debug("return", method, arguments);
+        log.debug(DEBUG_PREFIX, "return", method, arguments);
         lastApiResponse = Date.now();
         // TODO fix this janky crap ... couldn't get .apply to work
         methodComplete.resolve(arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
@@ -376,17 +411,17 @@ function api(method) {
 function email(content, ignoreMaxEmailIntervalMinutes) {
     if (!config.emailEnabled) { return; }
 
+    emailContent += (content + String.fromCharCode(13));
+
     if (!ignoreMaxEmailIntervalMinutes &&
         (Date.now() - lastEmailDate) < (config.maxEmailIntervalMinutes * 60 * 1000)) {
-        log.debug("too early to email; pushing message to digest " + content);
-        emailContent += (content + "\n");
+        log.debug(DEBUG_PREFIX, "too early to email; pushing message to digest " + content);
         return;
-    } else {
-        emailContent += content;
     }
 
-    log.info("emailing", config.email.to);
-    log.debug("content", emailContent);
+    log.info(DEBUG_PREFIX, "emailing", config.email.to);
+    log.debug(DEBUG_PREFIX, "content", emailContent);
+
     gmail.send({
         subject: config.minerName + ": " + config.email.subject,
         from: config.email.from,

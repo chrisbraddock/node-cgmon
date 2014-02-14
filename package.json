@@ -12,7 +12,9 @@
     "jsdom": "0.8.10",
     "pidof": "1.0.2",
     "lodash": "2.4.1",
-    "reboot": "0.0.1"
+    "reboot": "0.0.1",
+    "logrotate-stream": "0.2.3",
+    "jjg-ping": "1.0.0"
   },
   "devDependencies": {
   },
