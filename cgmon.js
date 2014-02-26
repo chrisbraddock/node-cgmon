@@ -51,47 +51,52 @@ var lastPool;
 var logReadStream;
 
 // *********************************************************************************************************************
-// SETUP & START MONITORING ********************************************************************************************
+// CONFIG **************************************************************************************************************
 // *********************************************************************************************************************
 
 // merge defaults & config (config takes priority)
 config = _.defaults(config, {
-    "minerName": "my miner",
-    "processName": "cgminer",
-    "startWaitSeconds": 5,
-    "cmd": "./start_screen.sh",
-    "args": [],
-    "apiHost": "127.0.0.1",
-    "apiPort": "4029",
-    "minMHSAv": 1,
-    "minMHS5s": 1,
-    "numGPUs": 1,
-    "maxTemp": 85,
-    "maxFanSpeed": 4500,
-    "maxHErrPct": 0,
-    "maxRejPct": 0,
-    "maxGetCgminerPidAttempts": 5,
-    "monitorStartTimeoutSeconds": 10,
-    "monitorIntervalSeconds": 1,
-    "logLevel": "info",
-    "logEnabled": true,
-    "logPath": "cgmon.log",
-    "logMaxSize": "1m",
-    "logCompress": true,
-    "logKeep": 3,
-    "emailEnabled": false,
-    "maxEmailIntervalMinutes": 60,
-    "email": {
-        "user": "youremail@gmail.com",
-        "pass": "your gmail password",
-        "from": "from email address",
-        "to": "to email address",
-        "subject": "cgmon",
-        "template": "email-template.html"
-    },
-    "pingDomain": "google.com",
-    "apiResponseThresholdSeconds": 10
+    "minerName": "my miner",              // identifying string used in emails and logs
+    "processName": "cgminer",             // name cgmon uses to find process ID
+    "startWaitSeconds": 5,                // time to wait for miner process to start before continuing
+    "cmd": "./start_screen.sh",           // process cgmon spawns to start cgminer
+    "args": [],                           // process arguments if any
+    "apiHost": "127.0.0.1",               // miner API host
+    "apiPort": "4029",                    // miner API port
+    "minMHSAv": 1,                        // sends email if API reports average MH/s less than this value
+    "minMHS5s": 1,                        // sends email if API reprots 5second MH/s less than this value
+    "numGPUs": 1,                         // sends email if API reports gpucount less than this value
+    "maxTemp": 85,                        // reboots machine if API reports any GPU temp greater than this value
+    "maxFanSpeed": 4500,                  // reboots machine if API reports any GPU fan speed greater than this value
+    "maxHErrPct": 0,                      // reboots machine if API reports any GPU hardware error% greater than this value
+    "maxRejPct": 0,                       // reboots machine if API reports any GPU reject% greater than this value
+    "maxGetCgminerPidAttempts": 5,        // reboots machine if cgmon cannot get process ID after this many attempts
+    "monitorStartTimeoutSeconds": 10,     // reboots machine if cgmon cannot start monitoring within this many seconds
+    "monitorIntervalSeconds": 1,          // number of seconds between monitor cycle intervals
+    "apiResponseThresholdSeconds": 10,    // reboots machine if API does not respond within this many seconds
+    "logLevel": "info",                   // cgmon.log and stdout log level (info, warn, error, debug)
+    "logEnabled": true,                   // if true cgmon writes cgmon.log to filesystem
+    "logPath": "cgmon.log",               // path to cgmon filessytem log file
+    "logMaxSize": "1m",                   // log max size before rotation
+    "logCompress": true,                  // true to compress rotated log files
+    "logKeep": 3,                         // number of rotated log files to keep
+    "rebootWaitSeconds": 5,               // allows time for pending email(s) to be sent prior to rebooting
+    "emailEnabled": false,                // true to allow cgmon to send emails
+    "maxEmailIntervalMinutes": 60,        // the time cgmon must wait in between sending non-critical emails
+    "email": {                            // email configuration
+        "user": "youremail@gmail.com",    // email configuration
+        "pass": "your gmail password",    // email configuration
+        "from": "from email address",     // email configuration
+        "to": "to email address",         // email configuration
+        "subject": "cgmon",               // email configuration
+        "template": "email-template.html" // email template - may be customized
+    },                                    //
+    "pingDomain": "google.com"            // domain to ping to monitor Internet connectivity
 });
+
+// *********************************************************************************************************************
+// SETUP & START MONITORING ********************************************************************************************
+// *********************************************************************************************************************
 
 // add a debug log level
 log.addLevel("debug", 1500, {fg: "yellow"}, "debug");
@@ -151,7 +156,7 @@ jsdom.jQueryify(window, "jquery.js", function () {
 });
 
 // *********************************************************************************************************************
-// PRIVATE FUNCTIONS ***************************************************************************************************
+// INTERNAL FUNCTIONS **************************************************************************************************
 // *********************************************************************************************************************
 
 // start monitoring cgminer
@@ -245,7 +250,7 @@ function startCgminer() {
         config.args
     );
     // lame hack
-    log.info(PRE, "sleeping seconds to allow cgminer process to start", startWaitSeconds);
+    log.info(PRE, "sleeping " + startWaitSeconds + " seconds to allow cgminer process to start");
     setTimeout(function () {
         cgminerStarted.resolve();
     }, startWaitSeconds * 1000);
@@ -259,16 +264,25 @@ function rebootMachine(message) {
     // give time for email to send
     setTimeout(function () {
         reboot.reboot();
-    }, 2000);
+    }, config.rebootWaitSeconds * 1000);
 }
 
 // the monitoring cycle loop; monitor() executed once per monitoring cycle
 function monitor() {
-    log.debug(PRE, "monitor", cgminerPID, cgminerClient);
+    var nowMs = Date.now(),
+        apiResponseThresholdMs = config.apiResponseThresholdSeconds * 1000;
+    log.debug(PRE, "monitor",
+        "nowMs: " + nowMs,
+        "lastApiResponse: " + lastApiResponse,
+        "apiResponseThresholdMs: " + apiResponseThresholdMs,
+        "cgminerPID: " + cgminerPID,
+        "cgminerClient: " + cgminerClient
+    );
 
     // detect and handle unresponsive api
+    log.debug("lastApiResponse", lastApiResponse);
     if (lastApiResponse != null &&
-        Date.now() - lastApiResponse > (config.apiResponseThresholdSeconds * 1000)) {
+        ((nowMs - lastApiResponse) > apiResponseThresholdMs)) {
         log.warn(PRE, "api unresponsive");
         rebootMachine("api unresponsive");
     }
@@ -394,7 +408,7 @@ function monitor() {
 // wrapper to cgminerClient api
 function api(method) {
     var methodComplete = $.Deferred();
-    log.debug(PRE, "api", method, _.rest(Array.prototype.slice(arguments)));
+    log.debug(PRE, "api(\"" + method + "\", " + _.rest(Array.prototype.slice(arguments)) + ")");
     // TODO fix this janky crap ... couldn't get .apply to work
     cgminerClient[method](arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]).then(function() {
         log.debug(PRE, "return", method, arguments);

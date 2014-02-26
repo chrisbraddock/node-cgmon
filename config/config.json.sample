@@ -1,33 +1,12 @@
+// 1) copy this file to config/config.json
+// 2) see the CONFIG section in cgmon.js for values you can use here
+// 3) remove this line and the ones above it from config/config.json (remove all lines starting with "//")
 {
     "minerName": "my miner",
-    "cgminer": {
-        "startWaitSeconds": 5,
-        "cmd": "./start_screen.sh",
-        "args": [],
-        "host": "127.0.0.1",
-        "port": "4028"
-    },
-    "minMHSAv": 1,
-    "minMHS5s": 1,
-    "numGPUs": 1,
-    "maxTemp": 85,
-    "maxFanSpeed": 4500,
-    "maxHErrPct": 0,
-    "maxRejPct": 0,
-    "maxGetCgminerPidAttempts": 5,
-    "monitorIntervalSeconds": 5,
-    "logLevel": "debug",
-    "logEnabled": true,
-    "logPath": "cgmon.log",
-    "emailEnabled": false,
-    "maxEmailIntervalMinutes": 60,
-    "apiResponseThresholdSeconds": 10,
     "email": {
         "user": "youremail@gmail.com",
         "pass": "your gmail password",
         "from": "from email address",
-        "to": "to email address",
-        "subject": "cgmon",
-        "template": "email-template.html"
+        "to": "to email address"
     }
 }
